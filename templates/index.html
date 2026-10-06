@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlacementPulse · First-Principles News &amp; Placement Intelligence</title>
+<script>
+(function () {
+  var t = localStorage.getItem('pp_theme');
+  var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (dark) document.documentElement.classList.add('dark');
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: {
+    fontFamily: { sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'], serif: ['"Source Serif 4"', 'Georgia', 'serif'] },
+    colors: { ink: '#0E1A2B', paper: '#F3F5F8', cobalt: '#2F5BFF', marigold: '#F5B83D' }
+  } }
+};
+</script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>
+  body { font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  .font-serif { font-family: 'Source Serif 4', Georgia, serif; }
+  .spin { width: 1rem; height: 1rem; border-radius: 9999px; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .reveal-in { animation: revealIn .25s ease-out; }
+  @keyframes revealIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .reveal-in, .spin { animation: none; } }
+  textarea, input, select, button { outline-offset: 2px; }
+  :focus-visible { outline: 2px solid #2F5BFF; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+</style>
+</head>
+<body class="min-h-full bg-paper text-slate-800 antialiased dark:bg-[#0A1220] dark:text-slate-200">
+
+<!-- busy banner -->
+<div id="busy" class="hidden fixed inset-x-0 top-0 z-50 bg-cobalt text-white shadow-lg">
+  <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 text-sm sm:px-6">
+    <span class="spin shrink-0"></span><span id="busyMsg" class="truncate">Working…</span>
+  </div>
+</div>
+
+<header class="bg-ink text-white">
+  <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+    <div class="flex items-center gap-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-marigold text-ink"><i data-lucide="activity" class="h-5 w-5"></i></div>
+      <div>
+        <h1 class="font-serif text-xl font-semibold leading-tight">PlacementPulse</h1>
+        <p class="text-xs text-slate-400">First-principles news and placement intelligence</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="statusPill" class="flex items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10" title="AI provider settings">
+        <span id="statusDot" class="h-2 w-2 rounded-full bg-slate-500"></span><span id="statusText">Checking…</span>
+      </button>
+      <button id="settingsBtn" class="rounded-lg border border-white/15 p-2 hover:bg-white/10" aria-label="Settings"><i data-lucide="settings" class="h-4 w-4"></i></button>
+      <button id="themeBtn" class="rounded-lg border border-white/15 p-2 hover:bg-white/10" aria-label="Toggle dark mode"><i id="themeIcon" data-lucide="moon" class="h-4 w-4"></i></button>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-7xl px-4 pb-24 pt-6 sm:px-6">
+
+  <!-- input panel -->
+  <section class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div class="flex flex-wrap gap-1 border-b border-slate-200 p-2 dark:border-slate-800" role="tablist">
+      <button data-tab="dump" class="tab-btn flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"><i data-lucide="clipboard-list" class="h-4 w-4"></i>Brain dump</button>
+      <button data-tab="url" class="tab-btn flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"><i data-lucide="link" class="h-4 w-4"></i>Article URL</button>
+      <button data-tab="feeds" class="tab-btn flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"><i data-lucide="rss" class="h-4 w-4"></i>Daily feeds</button>
+    </div>
+
+    <div id="tab-dump" class="tab-panel p-4 sm:p-5">
+      <label for="dumpText" class="mb-2 block text-sm font-medium">Paste anything: Mint, ET, Bloomberg, FT, Reuters, newsletters, whole front pages</label>
+      <textarea id="dumpText" rows="9" class="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm leading-relaxed placeholder:text-slate-400 focus:border-cobalt dark:border-slate-700 dark:bg-slate-950" placeholder="Paste raw news text here. Long dumps with several stories are split into separate cards automatically."></textarea>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <span id="dumpCount" class="text-xs text-slate-500">0 words</span>
+        <div class="flex items-center gap-2">
+          <button id="dumpClear" class="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Clear</button>
+          <button id="dumpGo" class="js-lock flex items-center gap-2 rounded-lg bg-cobalt px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"><i data-lucide="sparkles" class="h-4 w-4"></i>Build mental models</button>
+        </div>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Tip: Ctrl+Enter submits.</p>
+    </div>
+
+    <div id="tab-url" class="tab-panel hidden p-4 sm:p-5">
+      <label for="urlInput" class="mb-2 block text-sm font-medium">Article URL</label>
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <input id="urlInput" type="url" inputmode="url" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm placeholder:text-slate-400 focus:border-cobalt dark:border-slate-700 dark:bg-slate-950" placeholder="https://www.livemint.com/...">
+        <button id="urlGo" class="js-lock flex items-center justify-center gap-2 rounded-lg bg-cobalt px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600"><i data-lucide="sparkles" class="h-4 w-4"></i>Fetch and analyse</button>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Ads, banners and subscription boilerplate are stripped. Paywalled pages that block scraping need the Brain dump tab.</p>
+    </div>
+
+    <div id="tab-feeds" class="tab-panel hidden p-4 sm:p-5">
+      <div class="mb-2 text-sm font-medium">Sources</div>
+      <div id="feedPicker" class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"></div>
+      <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+        <input id="customFeed" type="url" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-cobalt dark:border-slate-700 dark:bg-slate-950" placeholder="Optional: add any RSS feed URL">
+        <button id="feedGo" class="js-lock flex items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-marigold dark:text-ink dark:hover:bg-amber-300"><i data-lucide="refresh-cw" class="h-4 w-4"></i>Fetch daily updates</button>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">Financial Times is paywalled: those stories are analysed from the headline and RSS summary only.</p>
+
+      <div id="feedResults" class="mt-5 hidden">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div id="feedMeta" class="text-sm text-slate-600 dark:text-slate-400"></div>
+          <div class="flex items-center gap-2">
+            <button id="feedSelectNew" class="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Select all new</button>
+            <button id="feedSelectNone" class="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Clear</button>
+            <button id="feedBatch" class="js-lock flex items-center gap-2 rounded-lg bg-cobalt px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"><i data-lucide="sparkles" class="h-4 w-4"></i><span id="feedBatchLabel">Analyse selected (0)</span></button>
+          </div>
+        </div>
+        <ul id="feedList" class="max-h-[28rem] divide-y divide-slate-200 overflow-y-auto rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- toolbar -->
+  <section class="mt-8">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="relative w-full lg:max-w-md">
+        <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+        <input id="search" type="search" class="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm placeholder:text-slate-400 focus:border-cobalt dark:border-slate-700 dark:bg-slate-900" placeholder="Search headlines, tags, mechanisms, stats…">
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <select id="range" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900" aria-label="Time range">
+          <option value="0">All time</option><option value="1">Last 24 hours</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option>
+        </select>
+        <label class="inline-flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+          <input id="simToggle" type="checkbox" class="peer sr-only">
+          <span class="relative h-5 w-9 rounded-full bg-slate-300 transition peer-checked:bg-marigold peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-cobalt dark:bg-slate-700 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-4"></span>
+          <span class="text-sm font-medium">Interview simulation</span>
+        </label>
+        <div class="relative">
+          <button id="exportBtn" class="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"><i data-lucide="download" class="h-4 w-4"></i>Export<i data-lucide="chevron-down" class="h-4 w-4"></i></button>
+          <div id="exportMenu" class="absolute right-0 z-30 mt-2 hidden w-64 overflow-hidden rounded-lg border border-slate-200 bg-white text-sm shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <button data-export="anki_csv" class="block w-full px-4 py-2.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800">Anki flashcards (CSV)</button>
+            <button data-export="anki_json" class="block w-full px-4 py-2.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800">Anki flashcards (JSON)</button>
+            <button data-export="backup" class="block w-full px-4 py-2.5 text-left hover:bg-slate-100 dark:hover:bg-slate-800">Full backup (JSON)</button>
+            <div class="border-t border-slate-200 px-4 py-2 text-xs text-slate-500 dark:border-slate-700">Respects the search, domain and time filters.</div>
+          </div>
+        </div>
+        <button id="synthBtn" class="js-lock flex items-center gap-2 rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-marigold dark:text-ink dark:hover:bg-amber-300"><i data-lucide="layers" class="h-4 w-4"></i>Weekly synthesis</button>
+      </div>
+    </div>
+    <div id="pills" class="mt-4 flex flex-wrap gap-2"></div>
+    <div id="countLine" class="mt-4 text-sm text-slate-500"></div>
+    <div id="simBanner" class="mt-3 hidden rounded-lg border border-marigold/50 bg-marigold/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+      Simulation is on. Each card shows only the headline and its memory anchor. Explain the causal chain out loud first, then reveal the breakdown to check yourself.
+    </div>
+  </section>
+
+  <section id="grid" class="mt-5 grid items-start gap-5 lg:grid-cols-2 2xl:grid-cols-3"></section>
+  <div id="empty" class="hidden rounded-xl border border-dashed border-slate-300 p-12 text-center dark:border-slate-700">
+    <div class="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-800"><i data-lucide="brain" class="h-5 w-5"></i></div>
+    <h2 id="emptyTitle" class="font-serif text-lg font-semibold">No cards yet</h2>
+    <p id="emptyBody" class="mx-auto mt-1 max-w-md text-sm text-slate-500">Paste a news dump, add an article URL, or fetch today's feeds above. Each story becomes a card with its causal chain, a GD power stat and a memory anchor.</p>
+  </div>
+</main>
+
+<!-- settings modal -->
+<div id="settingsModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 id="settingsTitle" class="font-serif text-lg font-semibold">AI provider</h2>
+      <button data-close class="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Close"><i data-lucide="x" class="h-5 w-5"></i></button>
+    </div>
+    <div class="space-y-4 text-sm">
+      <div>
+        <label for="setProvider" class="mb-1 block font-medium">Provider</label>
+        <select id="setProvider" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+          <option value="gemini">Google Gemini</option><option value="openai">OpenAI or compatible</option>
+        </select>
+      </div>
+      <div>
+        <label for="setKey" class="mb-1 block font-medium">API key</label>
+        <input id="setKey" type="password" autocomplete="off" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" placeholder="Leave blank to use the key in .env">
+      </div>
+      <div>
+        <label for="setModel" class="mb-1 block font-medium">Model</label>
+        <input id="setModel" type="text" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" placeholder="gemini-2.5-flash">
+      </div>
+      <div id="baseUrlRow" class="hidden">
+        <label for="setBase" class="mb-1 block font-medium">Base URL</label>
+        <input id="setBase" type="url" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950" placeholder="https://api.openai.com/v1">
+      </div>
+      <p class="text-xs text-slate-500">Stored only in this browser and sent to your local server with each request.</p>
+    </div>
+    <div class="mt-6 flex justify-end gap-2">
+      <button id="settingsClear" class="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Clear</button>
+      <button id="settingsSave" class="rounded-lg bg-cobalt px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Save settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- synthesis modal -->
+<div id="synthModal" class="fixed inset-0 z-40 hidden items-start justify-center overflow-y-auto bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="synthTitleBar">
+  <div class="my-8 w-full max-w-3xl rounded-xl bg-white shadow-2xl dark:bg-slate-900">
+    <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+      <h2 id="synthTitleBar" class="font-serif text-lg font-semibold">Weekly synthesis</h2>
+      <div class="flex items-center gap-2">
+        <button id="synthCopy" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Copy markdown</button>
+        <button id="synthDownload" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Download .md</button>
+        <button data-close class="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Close"><i data-lucide="x" class="h-5 w-5"></i></button>
+      </div>
+    </div>
+    <div id="synthBody" class="space-y-6 px-6 py-6 text-sm leading-relaxed"></div>
+  </div>
+</div>
+
+<div id="toasts" class="fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"></div>
+
+<script>
+{% raw %}
+(() => {
+'use strict';
+
+const DOMAINS = ['Finance', 'Macroeconomy', 'Geopolitics', 'Corporate Strategy/M&A', 'Tech & Regulation', 'Supply Chain'];
+const STYLE = {
+  'Finance': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300',
+  'Macroeconomy': 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300',
+  'Geopolitics': 'bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300',
+  'Corporate Strategy/M&A': 'bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300',
+  'Tech & Regulation': 'bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-300',
+  'Supply Chain': 'bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300'
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const icons = () => window.lucide && window.lucide.createIcons();
+
+const state = {
+  entries: [], domain: 'All', q: '', days: 0, sim: false,
+  revealed: new Set(), expanded: new Set(),
+  feeds: [], feedItems: [], selected: new Set(), synth: null
+};
+
+/* ---------- settings ---------- */
+const SKEY = 'pp_settings';
+const getSettings = () => { try { return JSON.parse(localStorage.getItem(SKEY)) || {}; } catch (e) { return {}; } };
+
+/* ---------- api ---------- */
+async function api(path, opts = {}) {
+  const s = getSettings();
+  const headers = { 'Content-Type': 'application/json' };
+  if (s.apiKey) headers['X-API-Key'] = s.apiKey;
+  if (s.provider) headers['X-Provider'] = s.provider;
+  if (s.model) headers['X-Model'] = s.model;
+  if (s.baseUrl) headers['X-Base-URL'] = s.baseUrl;
+  let res;
+  try { res = await fetch(path, Object.assign({}, opts, { headers })); }
+  catch (e) { throw Object.assign(new Error('Cannot reach the server. Is uvicorn still running?'), { status: 0 }); }
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* non-JSON body */ }
+  if (!res.ok) {
+    let msg = data && data.detail;
+    if (Array.isArray(msg)) msg = msg.map((m) => m.msg).join('; ');
+    throw Object.assign(new Error(msg || `Request failed (${res.status})`), { status: res.status });
+  }
+  return data;
+}
+
+/* ---------- ui helpers ---------- */
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  const tone = type === 'error' ? 'bg-rose-600 text-white' : type === 'success' ? 'bg-emerald-600 text-white' : 'bg-ink text-white';
+  el.className = `reveal-in rounded-lg px-4 py-3 text-sm shadow-lg ${tone}`;
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), type === 'error' ? 8000 : 4000);
+}
+
+function busy(on, msg) {
+  $('#busy').classList.toggle('hidden', !on);
+  if (msg) $('#busyMsg').textContent = msg;
+  $$('.js-lock').forEach((b) => { b.disabled = on; });
+}
+
+const timeAgo = (iso) => {
+  if (!iso) return '';
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))}m ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
+};
+
+const splitChain = (s) => String(s || '').split(/\s*(?:->|→|=>|⇒)\s*/).map((x) => x.trim()).filter(Boolean);
+
+/* ---------- cards ---------- */
+function section(icon, label, body) {
+  return `<div>
+    <div class="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400"><i data-lucide="${icon}" class="h-3.5 w-3.5"></i>${label}</div>
+    <p class="mt-1.5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">${esc(body)}</p>
+  </div>`;
+}
+
+function chainHTML(chain) {
+  const steps = splitChain(chain);
+  return `<ol class="mt-4">${steps.map((s, i) => `
+    <li class="relative flex gap-3 ${i < steps.length - 1 ? 'pb-3' : ''}">
+      ${i < steps.length - 1 ? '<span class="absolute left-[11px] top-6 bottom-0 w-px bg-cobalt/30"></span>' : ''}
+      <span class="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cobalt text-xs font-semibold text-white">${i + 1}</span>
+      <span class="pt-0.5 text-sm leading-relaxed">${esc(s)}</span>
+    </li>`).join('')}</ol>`;
+}
+
+function cardHTML(e) {
+  const d = e.data, id = e.id;
+  const badge = STYLE[d.domain] || STYLE.Finance;
+  const sim = state.sim;
+  const shown = !sim || state.revealed.has(id);
+  const open = sim ? shown : state.expanded.has(id);
+  const imp = d.finance_and_business_impact || {};
+  const src = e.source_url
+    ? `<a href="${esc(e.source_url)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-cobalt"><i data-lucide="external-link" class="h-3 w-3"></i>source</a>` : '';
+
+  const tags = shown ? `<div class="mt-3 flex flex-wrap gap-1.5">${(d.secondary_tags || []).map((t) =>
+    `<span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">${esc(t)}</span>`).join('')}</div>` : '';
+
+  const anchor = `<div class="mt-4 flex gap-3 rounded-lg border border-marigold/40 bg-marigold/10 p-3.5">
+    <i data-lucide="lightbulb" class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-marigold"></i>
+    <div><div class="text-xs font-semibold text-amber-800 dark:text-amber-300">Memory anchor</div>
+    <p class="mt-1 text-sm leading-relaxed text-slate-800 dark:text-slate-100">${esc(d.memory_anchor)}</p></div></div>`;
+
+  let body = '';
+  if (sim && !shown) {
+    body = `<p class="mt-4 text-sm text-slate-500">Explain the causal chain out loud, name the finance impact, and pick your GD number. Then check.</p>
+      <button data-act="reveal" data-id="${id}" class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 dark:bg-marigold dark:text-ink dark:hover:bg-amber-300"><i data-lucide="eye" class="h-4 w-4"></i>Reveal breakdown</button>`;
+  } else {
+    body = `<div class="reveal-in">
+      <div class="mt-5 text-xs font-semibold text-slate-500 dark:text-slate-400">Causal chain</div>
+      ${chainHTML(d.causal_mechanism)}
+      ${sim ? `<button data-act="reveal" data-id="${id}" class="mt-4 flex items-center gap-2 text-sm text-slate-500 hover:text-cobalt"><i data-lucide="eye-off" class="h-4 w-4"></i>Hide again</button>` : `
+      <button data-act="toggle" data-id="${id}" class="mt-4 flex items-center gap-1.5 text-sm font-medium text-cobalt hover:underline" aria-expanded="${open}"><i data-lucide="chevron-down" class="h-4 w-4 ${open ? 'rotate-180' : ''}"></i>${open ? 'Hide deep dive' : 'Show deep dive'}</button>`}
+      ${open ? `<div class="reveal-in mt-4 space-y-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+        ${section('zap', 'What happened', d.core_trigger)}
+        ${section('landmark', 'Corporate finance and valuation', imp.corporate_finance_valuation)}
+        ${section('trending-up', 'Markets and margins', imp.markets_margins)}
+        ${section('globe', 'Geopolitical and policy linkage', d.geopolitical_and_policy_linkage)}
+        <div class="rounded-lg bg-slate-100 p-3.5 dark:bg-slate-800">
+          <div class="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400"><i data-lucide="target" class="h-3.5 w-3.5"></i>GD power stat</div>
+          <p class="mt-1.5 font-serif text-base font-semibold leading-snug">${esc(d.gd_power_stat)}</p>
+        </div>
+        ${section('mic', 'GD discussion hook', d.gd_discussion_hook)}
+      </div>` : ''}
+    </div>`;
+  }
+
+  return `<article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900" data-card="${id}">
+    <div class="flex items-start justify-between gap-3">
+      <span class="rounded-md px-2 py-0.5 text-xs font-medium ${badge}">${esc(d.domain)}</span>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-400">${esc(timeAgo(e.created_at))}</span>${src}
+        <button data-act="delete" data-id="${id}" class="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10" aria-label="Delete card"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+      </div>
+    </div>
+    <h3 class="mt-3 font-serif text-xl font-semibold leading-snug">${esc(d.headline)}</h3>
+    ${tags}${anchor}${body}
+  </article>`;
+}
+
+function render() {
+  const counts = { All: state.entries.length };
+  DOMAINS.forEach((d) => { counts[d] = 0; });
+  state.entries.forEach((e) => { counts[e.data.domain] = (counts[e.data.domain] || 0) + 1; });
+
+  $('#pills').innerHTML = ['All'].concat(DOMAINS).map((d) => {
+    const on = state.domain === d;
+    const cls = on
+      ? 'bg-ink text-white dark:bg-marigold dark:text-ink border-transparent'
+      : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700';
+    return `<button data-domain="${esc(d)}" aria-pressed="${on}" class="rounded-full border px-3.5 py-1.5 text-sm ${cls}">${esc(d)} <span class="ml-1 opacity-60">${counts[d] || 0}</span></button>`;
+  }).join('');
+
+  const visible = state.entries.filter((e) => state.domain === 'All' || e.data.domain === state.domain);
+  $('#grid').innerHTML = visible.map(cardHTML).join('');
+  $('#countLine').textContent = `${visible.length} of ${state.entries.length} cards`;
+  $('#simBanner').classList.toggle('hidden', !state.sim);
+
+  const empty = visible.length === 0;
+  $('#empty').classList.toggle('hidden', !empty);
+  if (empty) {
+    const filtered = state.q || state.domain !== 'All' || state.days;
+    $('#emptyTitle').textContent = filtered ? 'No cards match these filters' : 'No cards yet';
+    $('#emptyBody').textContent = filtered
+      ? 'Clear the search, pick another domain or widen the time range.'
+      : "Paste a news dump, add an article URL, or fetch today's feeds above. Each story becomes a card with its causal chain, a GD power stat and a memory anchor.";
+  }
+  icons();
+}
+
+async function loadEntries() {
+  const p = new URLSearchParams({ q: state.q, days: String(state.days), limit: '1000' });
+  const data = await api('/api/entries?' + p.toString());
+  state.entries = data.entries;
+  render();
+}
+
+/* ---------- analysis actions ---------- */
+function reportResult(res, scroll) {
+  if (res.duplicate) toast('Already analysed. Showing the existing card.', 'info');
+  else toast(`Created ${res.created} card${res.created === 1 ? '' : 's'}.`, 'success');
+  if (scroll) $('#countLine').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function analyzeDump() {
+  const text = $('#dumpText').value.trim();
+  if (text.length < 200) return toast('Paste at least a few paragraphs (200+ characters).', 'error');
+  busy(true, 'Extracting first-principles models from your dump…');
+  try {
+    const res = await api('/api/analyze/text', { method: 'POST', body: JSON.stringify({ text }) });
+    $('#dumpText').value = ''; updateDumpCount();
+    await loadEntries(); reportResult(res, true);
+  } catch (e) { toast(e.message, 'error'); } finally { busy(false); }
+}
+
+async function analyzeUrl() {
+  const url = $('#urlInput').value.trim();
+  if (!url) return toast('Enter an article URL.', 'error');
+  busy(true, 'Fetching and cleaning the article, then analysing…');
+  try {
+    const res = await api('/api/analyze/url', { method: 'POST', body: JSON.stringify({ url }) });
+    $('#urlInput').value = '';
+    await loadEntries(); reportResult(res, true);
+  } catch (e) { toast(e.message, 'error'); } finally { busy(false); }
+}
+
+/* ---------- feeds ---------- */
+async function loadFeedPicker() {
+  try {
+    const data = await api('/api/feeds');
+    state.feeds = data.feeds;
+    const defaults = new Set(['et-economy', 'et-markets', 'mint-markets']);
+    $('#feedPicker').innerHTML = state.feeds.map((f) => `
+      <label class="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
+        <input type="checkbox" class="feed-check h-4 w-4 rounded accent-cobalt" value="${esc(f.id)}" ${defaults.has(f.id) ? 'checked' : ''}>
+        <span class="min-w-0 flex-1 truncate">${esc(f.name)}</span>
+        ${f.paywalled ? '<span class="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-600 dark:bg-slate-700 dark:text-slate-300">paywall</span>' : ''}
+      </label>`).join('');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function fetchDaily() {
+  const ids = $$('.feed-check:checked').map((c) => c.value);
+  const sources = state.feeds.filter((f) => ids.indexOf(f.id) !== -1).map((f) => ({ name: f.name, url: f.url }));
+  const custom = $('#customFeed').value.trim();
+  if (custom) sources.push({ name: 'Custom feed', url: custom });
+  if (!sources.length) return toast('Select at least one feed.', 'error');
+
+  busy(true, `Fetching ${sources.length} feed${sources.length === 1 ? '' : 's'}…`);
+  try {
+    const results = await Promise.allSettled(sources.map((s) => api('/api/feed?limit=15&url=' + encodeURIComponent(s.url))));
+    const items = [], seen = new Set(), failed = [];
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') {
+        r.value.items.forEach((it) => {
+          if (seen.has(it.link)) return;
+          seen.add(it.link);
+          items.push(Object.assign({}, it, { source: sources[i].name }));
+        });
+      } else failed.push(`${sources[i].name}: ${r.reason.message}`);
+    });
+    items.sort((a, b) => (b.published || '').localeCompare(a.published || ''));
+    state.feedItems = items;
+    state.selected = new Set();
+    renderFeed();
+    if (failed.length) toast(`Could not load ${failed.length} feed${failed.length === 1 ? '' : 's'}. ${failed[0]}`, 'error');
+    if (!items.length && !failed.length) toast('No stories found.', 'info');
+  } finally { busy(false); }
+}
+
+function renderFeed() {
+  const wrap = $('#feedResults');
+  wrap.classList.toggle('hidden', state.feedItems.length === 0);
+  const fresh = state.feedItems.filter((i) => !i.analyzed).length;
+  $('#feedMeta').textContent = `${state.feedItems.length} stories, ${fresh} not analysed yet`;
+  $('#feedBatchLabel').textContent = `Analyse selected (${state.selected.size})`;
+  $('#feedList').innerHTML = state.feedItems.map((it, idx) => `
+    <li class="flex gap-3 p-3 ${it.analyzed ? 'bg-slate-50 dark:bg-slate-950/50' : ''}">
+      <input type="checkbox" class="feed-item mt-1 h-4 w-4 shrink-0 rounded accent-cobalt" data-idx="${idx}" ${state.selected.has(it.link) ? 'checked' : ''} ${it.analyzed ? 'disabled' : ''} aria-label="Select story">
+      <div class="min-w-0 flex-1">
+        <a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium leading-snug hover:text-cobalt">${esc(it.title)}</a>
+        <div class="mt-0.5 text-xs text-slate-500">${esc(it.source)}${it.published ? ' · ' + esc(timeAgo(it.published)) : ''}${it.analyzed ? ' · analysed' : ''}</div>
+        ${it.summary ? `<p class="mt-1 line-clamp-2 text-xs text-slate-500">${esc(it.summary)}</p>` : ''}
+      </div>
+      ${it.analyzed ? '' : `<button data-single="${idx}" class="js-lock shrink-0 self-start rounded-lg border border-slate-300 px-2.5 py-1 text-xs hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Analyse</button>`}
+    </li>`).join('');
+}
+
+async function analyzeItem(it) {
+  const res = await api('/api/analyze/feed-item', {
+    method: 'POST',
+    body: JSON.stringify({ url: it.link, title: it.title, summary: it.summary, source: it.source })
+  });
+  it.analyzed = true;
+  state.selected.delete(it.link);
+  return res;
+}
+
+async function analyzeSingle(idx) {
+  const it = state.feedItems[idx];
+  if (!it) return;
+  busy(true, `Analysing: ${it.title.slice(0, 80)}…`);
+  try { const res = await analyzeItem(it); await loadEntries(); reportResult(res, false); }
+  catch (e) { toast(e.message, 'error'); }
+  finally { busy(false); renderFeed(); }
+}
+
+async function analyzeSelected() {
+  const items = state.feedItems.filter((i) => state.selected.has(i.link) && !i.analyzed);
+  if (!items.length) return toast('Select at least one new story.', 'error');
+  let ok = 0, skipped = 0, paused = false;
+  for (let i = 0; i < items.length; i++) {
+    busy(true, `Analysing ${i + 1} of ${items.length}: ${items[i].title.slice(0, 70)}…`);
+    try { await analyzeItem(items[i]); ok++; }
+    catch (e) {
+      if (e.status === 429) { paused = true; toast('Rate limit reached. Batch paused; retry the remaining stories in a minute.', 'error'); break; }
+      skipped++; toast(`Skipped "${items[i].title.slice(0, 50)}": ${e.message}`, 'error');
+    }
+    if (i < items.length - 1) await new Promise((r) => setTimeout(r, 1200));
+  }
+  busy(false);
+  await loadEntries();
+  renderFeed();
+  toast(`Batch finished: ${ok} analysed${skipped ? `, ${skipped} skipped` : ''}${paused ? ', paused by rate limit' : ''}.`, ok ? 'success' : 'info');
+}
+
+/* ---------- synthesis ---------- */
+function synthMarkdown(s, count, days) {
+  const L = [`# ${s.title}`, `*Last ${days} days · ${count} cards*`, '', '## Executive summary', s.executive_summary, '', '## Themes'];
+  s.themes.forEach((t) => {
+    L.push(`### ${t.theme || ''}`, t.insight || '');
+    if ((t.linked_headlines || []).length) L.push(...t.linked_headlines.map((h) => `- ${h}`));
+    L.push('');
+  });
+  L.push('## Cross-domain linkages');
+  s.cross_domain_linkages.forEach((x) => L.push(`- **${x.chain || ''}** (${(x.domains || []).join(', ')}): ${x.explanation || ''}`));
+  L.push('', '## GD power stats');
+  s.power_stats.forEach((x) => L.push(`- **${x.stat || ''}**${x.use_case ? ': ' + x.use_case : ''}`));
+  L.push('', '## Likely interview questions');
+  s.likely_interview_questions.forEach((q, i) => L.push(`${i + 1}. ${q}`));
+  L.push('', '## Watchlist for next week');
+  s.watchlist_next_week.forEach((w) => L.push(`- ${w}`));
+  return L.join('\n');
+}
+
+function synthHTML(s, count, days) {
+  const h = (t) => `<h3 class="font-serif text-base font-semibold">${esc(t)}</h3>`;
+  return `
+    <div><h2 class="font-serif text-2xl font-semibold leading-snug">${esc(s.title)}</h2>
+    <p class="mt-1 text-xs text-slate-500">Last ${days} days, ${count} cards</p>
+    <p class="mt-4 text-[15px] leading-relaxed">${esc(s.executive_summary)}</p></div>
+    <div>${h('Themes')}<div class="mt-3 space-y-4">${s.themes.map((t) => `
+      <div class="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+        <div class="font-medium">${esc(t.theme)}</div><p class="mt-1 text-slate-600 dark:text-slate-300">${esc(t.insight)}</p>
+        ${(t.linked_headlines || []).length ? `<ul class="mt-2 list-disc pl-5 text-xs text-slate-500">${t.linked_headlines.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      </div>`).join('')}</div></div>
+    <div>${h('Cross-domain linkages')}<div class="mt-3 space-y-3">${s.cross_domain_linkages.map((x) => `
+      <div class="rounded-lg bg-slate-100 p-4 dark:bg-slate-800">
+        <div class="font-medium">${esc(x.chain)}</div>
+        <div class="mt-0.5 text-xs text-slate-500">${esc((x.domains || []).join(' · '))}</div>
+        <p class="mt-1.5 text-slate-700 dark:text-slate-300">${esc(x.explanation)}</p>
+      </div>`).join('')}</div></div>
+    <div>${h('GD power stats')}<ul class="mt-3 space-y-2">${s.power_stats.map((x) => `
+      <li><span class="font-semibold">${esc(x.stat)}</span>${x.use_case ? `<span class="text-slate-500"> · ${esc(x.use_case)}</span>` : ''}</li>`).join('')}</ul></div>
+    <div>${h('Likely interview questions')}<ol class="mt-3 list-decimal space-y-1.5 pl-5">${s.likely_interview_questions.map((q) => `<li>${esc(q)}</li>`).join('')}</ol></div>
+    <div>${h('Watchlist for next week')}<ul class="mt-3 list-disc space-y-1.5 pl-5">${s.watchlist_next_week.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>`;
+}
+
+async function runSynthesis() {
+  busy(true, 'Compiling the 7-day macro debrief…');
+  try {
+    const res = await api('/api/synthesis', { method: 'POST', body: JSON.stringify({ days: 7 }) });
+    state.synth = res;
+    $('#synthBody').innerHTML = synthHTML(res.synthesis, res.count, res.days);
+    openModal('#synthModal');
+  } catch (e) { toast(e.message, 'error'); } finally { busy(false); }
+}
+
+/* ---------- modals ---------- */
+function openModal(sel) { const m = $(sel); m.classList.remove('hidden'); m.classList.add('flex'); icons(); }
+function closeModals() { $$('#settingsModal, #synthModal').forEach((m) => { m.classList.add('hidden'); m.classList.remove('flex'); }); }
+
+function loadSettingsForm() {
+  const s = getSettings();
+  $('#setProvider').value = s.provider || 'gemini';
+  $('#setKey').value = s.apiKey || '';
+  $('#setModel').value = s.model || '';
+  $('#setBase').value = s.baseUrl || '';
+  syncProviderUI();
+}
+function syncProviderUI() {
+  const p = $('#setProvider').value;
+  $('#baseUrlRow').classList.toggle('hidden', p !== 'openai');
+  $('#setModel').placeholder = p === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash';
+}
+
+async function refreshStatus() {
+  try {
+    const st = await api('/api/status');
+    $('#statusDot').className = `h-2 w-2 rounded-full ${st.configured ? 'bg-emerald-400' : 'bg-amber-400'}`;
+    $('#statusText').textContent = st.configured ? `${st.provider} · ${st.model}` : 'Add API key';
+  } catch (e) {
+    $('#statusDot').className = 'h-2 w-2 rounded-full bg-rose-500';
+    $('#statusText').textContent = 'Server offline';
+  }
+}
+
+/* ---------- misc ---------- */
+function updateDumpCount() {
+  const t = $('#dumpText').value.trim();
+  $('#dumpCount').textContent = `${t ? t.split(/\s+/).length : 0} words`;
+}
+
+function setTab(name) {
+  $$('.tab-panel').forEach((p) => p.classList.toggle('hidden', p.id !== 'tab-' + name));
+  $$('.tab-btn').forEach((b) => {
+    const on = b.dataset.tab === name;
+    b.className = `tab-btn flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${on ? 'bg-ink text-white dark:bg-marigold dark:text-ink' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`;
+    b.setAttribute('aria-selected', String(on));
+  });
+}
+
+function setThemeIcon() {
+  const dark = document.documentElement.classList.contains('dark');
+  $('#themeBtn').innerHTML = `<i data-lucide="${dark ? 'sun' : 'moon'}" class="h-4 w-4"></i>`;
+  icons();
+}
+
+function exportParams(kind) {
+  const p = new URLSearchParams({ kind, q: state.q, days: String(state.days) });
+  if (state.domain !== 'All') p.set('domain', state.domain);
+  return p.toString();
+}
+
+/* ---------- events ---------- */
+function bind() {
+  $$('.tab-btn').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  $('#dumpText').addEventListener('input', updateDumpCount);
+  $('#dumpText').addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyzeDump(); });
+  $('#dumpClear').addEventListener('click', () => { $('#dumpText').value = ''; updateDumpCount(); });
+  $('#dumpGo').addEventListener('click', analyzeDump);
+  $('#urlGo').addEventListener('click', analyzeUrl);
+  $('#urlInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') analyzeUrl(); });
+  $('#feedGo').addEventListener('click', fetchDaily);
+  $('#feedBatch').addEventListener('click', analyzeSelected);
+  $('#feedSelectNew').addEventListener('click', () => {
+    state.feedItems.forEach((i) => { if (!i.analyzed) state.selected.add(i.link); });
+    renderFeed();
+  });
+  $('#feedSelectNone').addEventListener('click', () => { state.selected.clear(); renderFeed(); });
+
+  $('#feedList').addEventListener('change', (e) => {
+    const cb = e.target.closest('.feed-item');
+    if (!cb) return;
+    const it = state.feedItems[Number(cb.dataset.idx)];
+    if (cb.checked) state.selected.add(it.link); else state.selected.delete(it.link);
+    $('#feedBatchLabel').textContent = `Analyse selected (${state.selected.size})`;
+  });
+  $('#feedList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-single]');
+    if (b) analyzeSingle(Number(b.dataset.single));
+  });
+
+  let timer;
+  $('#search').addEventListener('input', (e) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { state.q = e.target.value.trim(); loadEntries().catch((x) => toast(x.message, 'error')); }, 250);
+  });
+  $('#range').addEventListener('change', (e) => { state.days = Number(e.target.value); loadEntries().catch((x) => toast(x.message, 'error')); });
+  $('#pills').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-domain]');
+    if (!b) return;
+    state.domain = b.dataset.domain; render();
+  });
+  $('#simToggle').addEventListener('change', (e) => {
+    state.sim = e.target.checked; state.revealed.clear(); render();
+  });
+
+  $('#grid').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const id = Number(b.dataset.id);
+    if (b.dataset.act === 'reveal') {
+      if (state.revealed.has(id)) state.revealed.delete(id); else state.revealed.add(id);
+      render();
+    } else if (b.dataset.act === 'toggle') {
+      if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
+      render();
+    } else if (b.dataset.act === 'delete') {
+      if (!confirm('Delete this card?')) return;
+      try { await api('/api/entries/' + id, { method: 'DELETE' }); state.entries = state.entries.filter((x) => x.id !== id); render(); toast('Card deleted.', 'info'); }
+      catch (x) { toast(x.message, 'error'); }
+    }
+  });
+
+  $('#exportBtn').addEventListener('click', (e) => { e.stopPropagation(); $('#exportMenu').classList.toggle('hidden'); });
+  document.addEventListener('click', () => $('#exportMenu').classList.add('hidden'));
+  $('#exportMenu').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-export]');
+    if (!b) return;
+    try {
+      const res = await fetch('/api/export?' + exportParams(b.dataset.export));
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || 'Export failed.'); }
+      const blob = await res.blob();
+      const m = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') || '');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = m ? m[1] : 'placementpulse_export';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast('Export downloaded.', 'success');
+    } catch (x) { toast(x.message, 'error'); }
+  });
+
+  $('#synthBtn').addEventListener('click', runSynthesis);
+  $('#synthCopy').addEventListener('click', async () => {
+    if (!state.synth) return;
+    try { await navigator.clipboard.writeText(synthMarkdown(state.synth.synthesis, state.synth.count, state.synth.days)); toast('Markdown copied.', 'success'); }
+    catch (x) { toast('Clipboard blocked by the browser. Use Download instead.', 'error'); }
+  });
+  $('#synthDownload').addEventListener('click', () => {
+    if (!state.synth) return;
+    const md = synthMarkdown(state.synth.synthesis, state.synth.count, state.synth.days);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));
+    a.download = `placementpulse_weekly_${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  $('#themeBtn').addEventListener('click', () => {
+    const root = document.documentElement;
+    root.classList.toggle('dark');
+    localStorage.setItem('pp_theme', root.classList.contains('dark') ? 'dark' : 'light');
+    setThemeIcon(); render();
+  });
+
+  const openSettings = () => { loadSettingsForm(); openModal('#settingsModal'); };
+  $('#settingsBtn').addEventListener('click', openSettings);
+  $('#statusPill').addEventListener('click', openSettings);
+  $('#setProvider').addEventListener('change', syncProviderUI);
+  $('#settingsSave').addEventListener('click', () => {
+    const s = {
+      provider: $('#setProvider').value,
+      apiKey: $('#setKey').value.trim(),
+      model: $('#setModel').value.trim(),
+      baseUrl: $('#setBase').value.trim()
+    };
+    localStorage.setItem(SKEY, JSON.stringify(s));
+    closeModals(); refreshStatus(); toast('Settings saved.', 'success');
+  });
+  $('#settingsClear').addEventListener('click', () => {
+    localStorage.removeItem(SKEY); loadSettingsForm(); refreshStatus(); toast('Browser settings cleared. The server .env is used.', 'info');
+  });
+  $$('[data-close]').forEach((b) => b.addEventListener('click', closeModals));
+  $$('#settingsModal, #synthModal').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m) closeModals(); }));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModals(); });
+}
+
+/* ---------- init ---------- */
+async function init() {
+  bind();
+  setTab('dump');
+  setThemeIcon();
+  updateDumpCount();
+  icons();
+  refreshStatus();
+  loadFeedPicker();
+  try { await loadEntries(); } catch (e) { toast(e.message, 'error'); render(); }
+}
+init();
+})();
+{% endraw %}
+</script>
+</body>
+</html>
